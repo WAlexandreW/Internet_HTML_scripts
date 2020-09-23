@@ -117,3 +117,24 @@ class OneScrappedUnit():
         return URLs
 
 
+#a function to connect to the website to scrap
+def ConnectTo(url):
+    desktop_agents = ['Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0']
+    
+    #you might want to take a random header among the ones above
+    def random_headers():
+        return {'User-Agent': choice(desktop_agents),'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
+    try:
+        r =requests.get(url,headers=random_headers())
+    #print the blocked url in case. You might want to store it to a .txt or .csv file
+    except "blocked" in r.text:
+        print("ACCESS BLOCKED to: ", url)
+    except "Forbidden" in r.text:
+        print("FORBIDDEN ACCESS to: ", url)
+    else:
+        soup = BeautifulSoup(r.content, "lxml")
+        print("-"*100)
+        print("Successfully connected to: ", url)  
+        return soup
+
+
