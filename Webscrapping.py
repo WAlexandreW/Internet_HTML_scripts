@@ -20,7 +20,7 @@ import urllib.request
 import time
 import requests
 from random import choice
-
+import pandas as pd
 import time
 timestr = time.strftime("%Y%m%d")
 
@@ -138,3 +138,94 @@ def ConnectTo(url):
         return soup
 
 
+#here the fun begins
+
+#list of the urls to scrap
+baseurls = [r"https://www.website_to_scrap.com/page/1"]
+          
+#loop to all urls, and use function
+t0 = time.time()
+
+#to store all the contents
+BDD = []
+
+#load a link, get the sublinks
+for baseurl in baseurls:
+    # i put many timers for curiosity and monitor the efficiency.
+    baseurltime = time.time()
+    soup = ConnectTo(baseurl)
+    response_delay = time.time() - baseurltime
+    print("Waiting ",round(10*response_delay,2), " seconds...")
+    time.sleep(10*response_delay)
+    
+    URLlist=OneScrappedUnit.getURLs(soup)                        
+    compteur_page = 1
+    
+    sheettime = time.time()
+    
+    #loop through links
+    for link in URLlist:
+        sublinktime = time.time()
+        #if there is a link
+        if len(link) > 0: 
+            #connect to the link
+            soup = ConnectTo(link)
+            #extract data
+            OneScrappedUnit = OneScrappedUnit.extract_data(soup)
+            #append data to BDD list
+            BDD.append(OneScrappedUnit)
+            print("Waiting ",round(15*response_delay,2), " seconds...")
+            
+            #because its important to avoid too many requests
+            time.sleep(15*response_delay)
+            sublinktime = time.time() - sublinktime
+            print("Sublink:",link," : ",round(sublinktime,2), "secs")
+            
+    sheettime = time.time() - sheettime
+    print("-"*100)
+    print("First sheet completion time: ",round(sheettime,2), "secs")
+    #since we started page 1, I want also to scrap page 2 to 21
+    #the below part is similar and could have been merged with the previous one
+    for compteur_page in range(2,21):
+        
+        url= baseurl +"-"+str(compteur_page)
+        sheettime = time.time()
+        
+        soup = ConnectTo(url)
+        response_delay = time.time() - sheettime
+        print("Waiting ",round(12*response_delay,2), " seconds...")
+        time.sleep(12*response_delay)
+        URLlist=OneScrappedUnit.getURLs(soup)
+        
+        for link in URLlist:
+            if len(link) > 0:
+                sublinkstart = time.time()
+                soup = ConnectTo(link)
+                sublinktime = time.time() - sublinkstart        
+                OneScrappedUnit = OneScrappedUnit.extract_data(soup)
+                BDD.append(OneScrappedUnit)
+                print("Waiting ",round(20*sublinktime,2), " seconds...")
+                time.sleep(15*sublinktime)
+        
+        sheettime = time.time() - sheettime
+        print("-"*100)
+        print("Sheet n°" + str(compteur_page)+"/20"+ " completion time: ",round(sheettime,2), "secs ie ",round(sheettime/60,2), " minutes." )
+        
+    baseurltime = time.time() - baseurltime
+    
+    print("url completion time: ",round(baseurltime,2), "secs")
+    
+    #once data are retrived, for each instance of the class  OneScrappedUnit filled with data, put it in a dataframe
+    d = []
+    for OneScrappedUnit in BDD:
+        d.append({'Feature1': OneScrappedUnit.Feature1, 'Feature2': OneScrappedUnit.Feature2,'Feature3': OneScrappedUnit.Feature3})     
+    
+    fichier = pd.DataFrame(d)
+
+    #put the whole dataframe in an excel file
+    fichier.to_excel(r"C:\Users\Alexandre\Project\OneScrappedUnit_" + timestr + ".xlsx", index= False)  
+
+#for the curiosity sake
+totalTime = time.time() - t0
+print("Total time of scanning: ",round(totalTime,2), "secs i.ee : ",round(totalTime/60,2), " minutes." )
+print("Total time of scanning: ",round((totalTime/60)/60,2), " hours.")
